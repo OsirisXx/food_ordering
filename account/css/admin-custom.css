@@ -1,0 +1,667 @@
+/* Admin Sidebar Custom Styling for Materialize Layout */
+
+#left-sidebar-nav {
+    background: linear-gradient(180deg, #D2B48C 0%, #F5DEB3 100%) !important;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+/* Remove unwanted top gap when topbar/header is absent */
+#left-sidebar-nav .side-nav.fixed,
+.leftside-navigation.side-nav.fixed {
+    top: 0 !important;
+}
+
+#left-sidebar-nav .side-nav li a {
+    color: #333 !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+#left-sidebar-nav .side-nav li a:hover {
+    background-color: rgba(255,255,255,0.3) !important;
+    color: #333 !important;
+}
+
+#left-sidebar-nav .side-nav li.active a {
+    background-color: #CD853F !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(205,133,63,0.3);
+}
+
+#left-sidebar-nav .side-nav li.active a:hover {
+    background-color: #B8860B !important;
+    color: white !important;
+}
+
+#left-sidebar-nav .side-nav li a i {
+    margin-right: 15px;
+    width: 20px;
+    text-align: center;
+}
+
+/* Fix gap between user profile and navigation items */
+#left-sidebar-nav .side-nav li.user-details {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+#left-sidebar-nav .side-nav li.user-details + li {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.sidebar-profile {
+    padding: 30px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    color: #333;
+}
+
+.profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-right: 15px;
+    border: 3px solid rgba(255,255,255,0.5);
+}
+
+.profile-details h4 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.profile-details p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.sidebar-nav {
+    padding: 20px 0;
+}
+
+#sidebarnav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#sidebarnav li {
+    margin-bottom: 5px;
+}
+
+#sidebarnav li a {
+    display: flex;
+    align-items: center;
+    padding: 15px 25px;
+    color: #333;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 0 25px 25px 0;
+    margin-right: 20px;
+}
+
+#sidebarnav li a:hover {
+    background-color: rgba(255,255,255,0.3);
+    color: #333;
+    text-decoration: none;
+}
+
+#sidebarnav li.active a {
+    background-color: #CD853F;
+    color: white;
+    box-shadow: 0 2px 8px rgba(205,133,63,0.3);
+}
+
+#sidebarnav li.active a:hover {
+    background-color: #B8860B;
+    color: white;
+}
+
+#sidebarnav li a i {
+    font-size: 18px;
+    margin-right: 15px;
+    width: 20px;
+    text-align: center;
+}
+
+#sidebarnav li a span {
+    font-weight: 500;
+}
+
+.nav-label {
+    color: #666;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 20px 25px 10px 25px;
+    margin: 0;
+}
+
+.nav-devider {
+    height: 1px;
+    background: rgba(255,255,255,0.2);
+    margin: 15px 0;
+}
+
+/* Main content area adjustments */
+.page-wrapper {
+    margin-left: 280px;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+/* Overview metric cards (to mirror the provided design) */
+.overview-metrics .metric-card {
+    background: #ffffff !important;
+    border: 1px solid #eee !important;
+    border-radius: 12px !important;
+    padding: 18px 20px !important;
+    margin-bottom: 20px !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06) !important;
+    color: #222 !important;
+}
+.overview-metrics .metric-card .metric-label {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 8px;
+}
+.overview-metrics .metric-card .metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #222;
+}
+/* Override Materialize framework colors for metric cards */
+.overview-metrics .metric-card.primary { 
+    border-left: 6px solid #CD853F !important; 
+    background-color: #ffffff !important;
+}
+
+.overview-metrics .metric-card.danger { 
+    border-left: 6px solid #D2B48C !important; 
+    background-color: #ffffff !important;
+}
+
+.overview-metrics .metric-card.info { 
+    border-left: 6px solid #F5DEB3 !important; 
+    background-color: #ffffff !important;
+}
+
+.overview-metrics .metric-card.success { 
+    border-left: 6px solid #DEB887 !important; 
+    background-color: #ffffff !important;
+}
+
+/* Override any Materialize framework color classes */
+.primary, .btn-primary, .badge.primary {
+    background-color: #CD853F !important;
+    color: white !important;
+}
+
+.danger, .btn-danger, .badge.danger {
+    background-color: #D2B48C !important;
+    color: white !important;
+}
+
+.info, .btn-info, .badge.info {
+    background-color: #F5DEB3 !important;
+    color: #333 !important;
+}
+
+.success, .btn-success, .badge.success {
+    background-color: #DEB887 !important;
+    color: white !important;
+}
+
+/* Additional overrides for any remaining framework colors */
+.metric-card, .card {
+    background-color: #ffffff !important;
+}
+
+.metric-card.primary, .card.primary {
+    border-left: 6px solid #CD853F !important;
+    background-color: #ffffff !important;
+}
+
+.metric-card.danger, .card.danger {
+    border-left: 6px solid #D2B48C !important;
+    background-color: #ffffff !important;
+}
+
+.metric-card.info, .card.info {
+    border-left: 6px solid #F5DEB3 !important;
+    background-color: #ffffff !important;
+}
+
+.metric-card.success, .card.success {
+    border-left: 6px solid #DEB887 !important;
+    background-color: #ffffff !important;
+}
+
+/* Override any blue or green colors that might be coming from Materialize */
+[class*="blue"], [class*="green"] {
+    background-color: #CD853F !important;
+    color: white !important;
+}
+
+/* Ensure no blue or green text colors */
+.text-blue, .blue-text {
+    color: #CD853F !important;
+}
+
+.text-green, .green-text {
+    color: #DEB887 !important;
+}
+
+/* Page header styling */
+.page-header {
+    background: linear-gradient(90deg, #D2B48C 0%, #F5DEB3 100%);
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.page-title {
+    color: #333;
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.page-title i {
+    margin-right: 15px;
+    font-size: 24px;
+}
+
+/* Content card styling */
+.content-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    margin-bottom: 30px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(90deg, #D2B48C 0%, #F5DEB3 100%);
+    padding: 20px 25px;
+    border-bottom: 1px solid #eee;
+}
+
+.card-title {
+    color: #333;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.card-body {
+    padding: 25px;
+}
+
+/* Button styling */
+.card-header .btn-primary-custom,
+.content-card .btn-primary-custom,
+.btn-primary-custom {
+    background: #5A4632 !important; /* dark brown */
+    border: none !important;
+    color: #ffffff !important;
+    padding: 10px 18px !important;
+    border-radius: 0 !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    min-height: 40px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.card-header .btn-primary-custom:hover,
+.content-card .btn-primary-custom:hover,
+.btn-primary-custom:hover {
+    background: #483624 !important; /* darker brown */
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12) !important;
+}
+
+.btn-danger-custom {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+    border: none !important;
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 0 !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(239,68,68,0.2) !important;
+}
+
+.btn-danger-custom:hover {
+    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(239,68,68,0.3) !important;
+}
+
+/* Table styling */
+.table-custom {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.table-custom thead {
+    background: linear-gradient(90deg, #D2B48C 0%, #F5DEB3 100%);
+}
+
+.table-custom thead th {
+    color: #333;
+    font-weight: 600;
+    border: none;
+    padding: 15px;
+}
+
+.table-custom tbody tr {
+    transition: all 0.3s ease;
+}
+
+.table-custom tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table-custom tbody td {
+    padding: 15px;
+    border-top: 1px solid #eee;
+    vertical-align: middle;
+}
+
+/* Modal styling */
+.modal-header-custom {
+    background: linear-gradient(90deg, #D2B48C 0%, #F5DEB3 100%);
+    color: #333;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-title {
+    font-weight: 600;
+}
+
+/* Form styling */
+.card-header .form-control-custom,
+.content-card .form-control-custom,
+.form-control-custom {
+    border: 2px solid #d1d5db !important;
+    border-radius: 10px !important;
+    padding: 14px 18px !important;
+    transition: all 0.3s ease !important;
+    color: #374151 !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.5 !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.1) !important;
+    min-height: 48px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+}
+
+.card-header .form-control-custom:focus,
+.content-card .form-control-custom:focus,
+.form-control-custom:focus {
+    border-color: #CD853F !important;
+    box-shadow: 0 0 0 3px rgba(205,133,63,0.1), 0 6px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1) !important;
+    color: #374151 !important;
+    background: #ffffff !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+}
+
+.card-header .form-control-custom::placeholder,
+.content-card .form-control-custom::placeholder,
+.form-control-custom::placeholder {
+    color: #9ca3af !important;
+    opacity: 1 !important;
+    font-weight: 400 !important;
+    font-style: normal !important;
+}
+
+.card-header .form-control-custom:hover,
+.content-card .form-control-custom:hover,
+.form-control-custom:hover {
+    border-color: #CD853F !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .admin-sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .page-wrapper {
+        margin-left: 0;
+    }
+    
+    .sidebar-toggle {
+        display: block;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1001;
+        background: #CD853F;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+}
+
+.sidebar-toggle {
+    display: none;
+}
+
+/* Star rating styling */
+.star-rating {
+    color: #FFD700;
+    font-size: 16px;
+}
+
+/* Custom wave effect color */
+.waves-effect {
+    background-color: rgba(205, 133, 63, 0.3) !important;
+}
+
+.waves-effect .waves-ripple {
+    background-color: rgba(205, 133, 63, 0.6) !important;
+}
+
+/* Ensure badges inside tables do not float outside cells */
+.table-custom td .badge {
+    float: none !important;
+    position: static !important;
+    display: inline-block !important;
+    margin: 0 !important;
+    vertical-align: middle !important;
+    color: #ffffff !important;
+}
+
+/* Keep Role column text aligned consistently */
+.table-custom td:nth-child(4),
+.table-custom th:nth-child(4) {
+    text-align: left;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: #FFF3CD;
+    color: #856404;
+}
+
+.status-approved {
+    background-color: #D4EDDA;
+    color: #155724;
+}
+
+.status-rejected {
+    background-color: #F8D7DA;
+    color: #721C24;
+}
+
+.status-available {
+    background-color: #D4EDDA;
+    color: #155724;
+}
+
+.status-unavailable {
+    background-color: #F8D7DA;
+    color: #721C24;
+}
+
+/* Actions column styling */
+.actions-cell {
+    white-space: nowrap;
+    min-width: 220px;
+    max-width: 240px;
+    padding: 8px 10px !important;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.inline-form {
+    display: inline-block;
+    margin: 0;
+}
+
+/* Small button variants */
+.btn-sm {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    border-radius: 0 !important;
+    width: 100px !important;
+    height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+.btn-primary-custom.btn-sm {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    background: #5A4632 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08) !important;
+    border-radius: 0 !important;
+    width: 100px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Make all buttons on khaki themed pages dark brown */
+.khaki-theme .btn,
+.khaki-theme .btn-small,
+.khaki-theme .btn-primary-custom,
+.khaki-theme .btn-danger-custom,
+.khaki-theme .btn-info,
+.khaki-theme .btn-success {
+    background-color: #5A4632 !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+.khaki-theme .btn:hover,
+.khaki-theme .btn-small:hover,
+.khaki-theme .btn-primary-custom:hover,
+.khaki-theme .btn-danger-custom:hover,
+.khaki-theme .btn-info:hover,
+.khaki-theme .btn-success:hover {
+    background-color: #483624 !important;
+    color: #ffffff !important;
+}
+
+.btn-danger-custom.btn-sm {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+    box-shadow: 0 1px 2px rgba(239,68,68,0.2) !important;
+    border-radius: 0 !important;
+    width: 100px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Responsive button layout */
+@media (max-width: 768px) {
+    .actions-cell {
+        min-width: 140px;
+        padding: 6px 8px !important;
+    }
+    
+    .button-group {
+        flex-direction: column;
+        gap: 6px;
+        align-items: stretch;
+    }
+    
+    .btn-sm {
+        padding: 6px 10px !important;
+        font-size: 10px !important;
+        text-align: center;
+    }
+}
