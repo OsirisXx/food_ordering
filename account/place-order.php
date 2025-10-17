@@ -223,8 +223,9 @@ $verified = $row['verified'];
                         <div class="input-field col s12">
 							<label for="payment_type">Payment Type</label><br><br>
 							<select id="payment_type" name="payment_type">
-									<option value="Wallet" selected>Wallet</option>
-									<option value="Cash On Delivery" <?php if(!$verified) echo 'disabled';?>>Cash on Delivery</option>							
+									<option value="GCash">GCash</option>
+									<option value="PayMaya">PayMaya</option>
+									<option value="Cash On Delivery" selected>Cash on Delivery</option>							
 							</select>
                         </div>
                       </div>					
@@ -236,22 +237,6 @@ $verified = $row['verified'];
 							<div class="errorTxt1"></div>
                         </div>
                       </div>
-                      <div class="row">
-                        <div class="input-field col s12">
-                          <i class="mdi-action-credit-card prefix"></i>
-							<input name="cc_number" id="cc_number" type="text" data-error=".errorTxt2" required>
-							<label for="cc_number" class="">Card Number</label>
-							<div class="errorTxt2"></div>
-                        </div>
-                      </div>
-                      <div class="row">
-                        <div class="input-field col s12">
-                          <i class="mdi-communication-vpn-key prefix"></i>	
-							<input name="cvv_number" id="cvv_number" type="text" data-error=".errorTxt3" required>
-							<label for="cvv_number" class="">CVV Number</label>								
-							<div class="errorTxt3"></div>
-                        </div>
-                      </div>					  
                       <div class="row">
                         <div class="row">
                           <div class="input-field col s12">
@@ -265,9 +250,9 @@ $verified = $row['verified'];
 					  	foreach ($_POST as $key => $value)
 						{
 							if($key == 'action' || $value == ''){
-								break;
+								continue;
 							}
-							echo '<input name="'.$key.'" type="hidden" value="'.$value.'">';
+							echo '<input name="'.$key.'" type="hidden" value="'.htmlspecialchars($value).'">';
 						}
 					  ?>
                     </form>
@@ -296,35 +281,53 @@ $verified = $row['verified'];
 		<p><strong>Contact Number:</strong> '.$contact.'</p>
         <a href="#" class="secondary-content"><i class="mdi-action-grade"></i></a>';
 		
-	foreach ($_POST as $key => $value)
-	{
-		if($value == ''){
-			break;
+	// Handle both old format (individual item quantities) and new format (cart_data JSON)
+	$cart_items = array();
+	
+	// Check if cart_data is provided (new format)
+	if(isset($_POST['cart_data']) && !empty($_POST['cart_data'])) {
+		$cart_data = json_decode($_POST['cart_data'], true);
+		if($cart_data) {
+			foreach($cart_data as $item_id => $quantity) {
+				$cart_items[$item_id] = $quantity;
+			}
 		}
-		if(is_numeric($key)){
-		$result = mysqli_query($con, "SELECT * FROM items WHERE id = $key");
+	} else {
+		// Handle old format for backward compatibility
+		foreach ($_POST as $key => $value) {
+			if($value == ''){
+				break;
+			}
+			if(is_numeric($key)){
+				$cart_items[$key] = $value;
+			}
+		}
+	}
+	
+	// Display cart items
+	foreach($cart_items as $item_id => $quantity) {
+		$result = mysqli_query($con, "SELECT * FROM items WHERE id = $item_id");
 		while($row = mysqli_fetch_array($result))
 		{
 			$price = $row['price'];
 			$item_name = $row['name'];
 			$item_id = $row['id'];
 		}
-			$price = $value*$price;
-			    echo '<li class="collection-item">
-        <div class="row">
-            <div class="col s7">
-                <p class="collections-title"><strong>#'.$item_id.' </strong>'.$item_name.'</p>
-            </div>
-            <div class="col s2">
-                <span>'.$value.' Pieces</span>
-            </div>
-            <div class="col s3">
-                <span>PHP '.$price.'</span>
-            </div>
-        </div>
-    </li>';
+		$price = $quantity * $price;
+		echo '<li class="collection-item">
+			<div class="row">
+				<div class="col s7">
+					<p class="collections-title"><strong>#'.$item_id.' </strong>'.$item_name.'</p>
+				</div>
+				<div class="col s2">
+					<span>'.$quantity.' Pieces</span>
+				</div>
+				<div class="col s3">
+					<span>PHP '.number_format($price, 2).'</span>
+				</div>
+			</div>
+		</li>';
 		$total = $total + $price;
-	}
 	}
     echo '<li class="collection-item">
         <div class="row">
@@ -335,7 +338,7 @@ $verified = $row['verified'];
                 <span>&nbsp;</span>
             </div>
             <div class="col s3">
-                <span><strong>PHP '.$total.'</strong></span>
+                <span><strong>PHP '.number_format($total, 2).'</strong></span>
             </div>
         </div>
     </li>';
@@ -397,28 +400,18 @@ $verified = $row['verified'];
                 required: true,
                 minlength: 5
             },
-            cc_number: {
-                required: true,
-                minlength: 16,
-            },
-            cvv_number: {
-                required: true,
-                minlength: 3,
-			},
+            payment_type: {
+                required: true
+            }
 		},
         messages: {
            address:{
-                required: "Enter a address",
+                required: "Enter an address",
                 minlength: "Enter at least 5 characters"
-            },	
-           cc_number:{
-                required: "Please provide card number",
-                minlength: "Enter at least 16 digits",
-            },	
-           cvv_number:{
-                required: "Please provide CVV number",
-                minlength: "Enter at least 3 digits",		
-            },				
+            },
+           payment_type:{
+                required: "Please select a payment method"
+            }				
 		},
         errorElement : 'div',
         errorPlacement: function(error, element) {
@@ -430,23 +423,9 @@ $verified = $row['verified'];
           }
         }
      });
-	  $('#cc_number').formatter({
-          'pattern': '{{9999}}-{{9999}}-{{9999}}-{{9999}}',
-          'persistent': true
-      });
-	  $('#cvv_number').formatter({
-          'pattern': '{{9}}-{{9}}-{{9}}',
-          'persistent': true
-      });
 		$('#payment_type').change(function() {
-		if ($(this).val() === 'Cash On Delivery') {
-		  $("#cc_number").prop('disabled', true);
-		  $("#cvv_number").prop('disabled', true);		  
-		}
-		if ($(this).val() === 'Wallet'){
-		  $("#cc_number").prop('disabled', false);
-		  $("#cvv_number").prop('disabled', false);	
-		}
+		// Payment type change handler - no card fields to disable/enable anymore
+		console.log('Payment type changed to:', $(this).val());
 		});
     </script>
 </body>

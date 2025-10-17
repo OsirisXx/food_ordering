@@ -112,7 +112,15 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id() && isse
             ?>
             <div class="order-item" style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 6px; display: flex; align-items: center;">
               <div style="width: 60px; height: 60px; margin-right: 15px; border-radius: 6px; overflow: hidden;">
-                <img src="<?php echo !empty($item['image']) ? '../images/' . $item['image'] : '../images/logo1.png'; ?>" 
+                <?php 
+                $item_image = '';
+                if (!empty($item['image'])) {
+                    $item_image = 'data:image/jpeg;base64,' . base64_encode($item['image']);
+                } else {
+                    $item_image = '../images/logo1.png';
+                }
+                ?>
+                <img src="<?php echo $item_image; ?>" 
                      alt="<?php echo htmlspecialchars($item['item_name'] ?? 'Item'); ?>" 
                      style="width: 100%; height: 100%; object-fit: cover;">
               </div>
@@ -462,16 +470,28 @@ $(document).ready(function(){
                                                 <span><strong>PHP. '.$row['total'].'</strong></span>
                                             </div>';
 								if(!preg_match('/^Cancelled/', $status)){
-									if($status != 'Delivered'){
-								echo '<form action="routers/cancel-order.php" method="post">
-										<input type="hidden" value="'.$id.'" name="id">
-										<input type="hidden" value="Cancelled by Customer" name="status">	
-										<input type="hidden" value="'.$row['payment_type'].'" name="payment_type">											
-										<button class="btn waves-effect waves-light right submit" type="submit" name="action">Cancel Order
-                                              <i class="mdi-content-clear right"></i> 
-										</button>
-										</form>';
-								}
+									if($status == 'Completed'){
+										// Check if review already exists for this order
+										$review_check = mysqli_query($con, "SELECT id FROM reviews WHERE order_id = $id AND deleted = 0");
+										if(mysqli_num_rows($review_check) > 0) {
+											echo '<button class="btn waves-effect waves-light right submit" type="button" onclick="alert(\'You have already reviewed this order!\')" style="background: #6c757d;">Review Submitted
+	                                              <i class="mdi-action-rate-review right"></i> 
+											</button>';
+										} else {
+											echo '<button class="btn waves-effect waves-light right submit" type="button" onclick="openReviewModal('.$id.')">Leave Review
+	                                              <i class="mdi-action-rate-review right"></i> 
+											</button>';
+										}
+									} else if($status != 'Delivered'){
+										echo '<form action="routers/cancel-order.php" method="post">
+												<input type="hidden" value="'.$id.'" name="id">
+												<input type="hidden" value="Cancelled by Customer" name="status">	
+												<input type="hidden" value="'.$row['payment_type'].'" name="payment_type">											
+												<button class="btn waves-effect waves-light right submit" type="submit" name="action">Cancel Order
+	                                              <i class="mdi-content-clear right"></i> 
+												</button>
+												</form>';
+									}
 								}
 								echo'</div></li>';
 
@@ -500,6 +520,45 @@ $(document).ready(function(){
   <?php include 'includes/footer.php'; ?>
     <!-- END FOOTER -->
 
+  <!-- Review Modal -->
+  <div id="reviewModal" style="display:none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.45);">
+    <div style="max-width: 500px; width: 92%; margin: 5% auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+      <div style="padding: 18px 20px; background: #fdf2e9; border-bottom: 1px solid #f1e3d6; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="display:inline-flex; width:34px; height:34px; border-radius:50%; align-items:center; justify-content:center; background:#fff3cd; color:#856404;">
+            <i class="fa fa-star"></i>
+          </span>
+          <h3 style="margin:0; font-size: 18px; font-weight: 600; color:#333;">Leave a Review</h3>
+        </div>
+        <button id="closeReviewModal" style="border:none; background:transparent; font-size:18px; cursor:pointer; color:#666;">×</button>
+      </div>
+      <form id="reviewForm" style="padding: 20px;">
+        <input type="hidden" id="reviewOrderId" name="order_id">
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 10px; font-weight: 500; color: #333;">Rating:</label>
+          <div class="star-rating" style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center;">
+            <span class="star" data-rating="1" style="font-size: 32px; color: #ccc; cursor: pointer; transition: color 0.2s; user-select: none; display: inline-block; width: 32px; height: 32px; text-align: center; line-height: 32px;">★</span>
+            <span class="star" data-rating="2" style="font-size: 32px; color: #ccc; cursor: pointer; transition: color 0.2s; user-select: none; display: inline-block; width: 32px; height: 32px; text-align: center; line-height: 32px;">★</span>
+            <span class="star" data-rating="3" style="font-size: 32px; color: #ccc; cursor: pointer; transition: color 0.2s; user-select: none; display: inline-block; width: 32px; height: 32px; text-align: center; line-height: 32px;">★</span>
+            <span class="star" data-rating="4" style="font-size: 32px; color: #ccc; cursor: pointer; transition: color 0.2s; user-select: none; display: inline-block; width: 32px; height: 32px; text-align: center; line-height: 32px;">★</span>
+            <span class="star" data-rating="5" style="font-size: 32px; color: #ccc; cursor: pointer; transition: color 0.2s; user-select: none; display: inline-block; width: 32px; height: 32px; text-align: center; line-height: 32px;">★</span>
+            <span id="ratingText" style="margin-left: 15px; color: #666; font-size: 14px;">Click to rate</span>
+          </div>
+          <input type="hidden" id="ratingValue" name="rating" value="0">
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 10px; font-weight: 500; color: #333;">Review:</label>
+          <textarea name="review_text" placeholder="Share your experience with this order..." 
+                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; min-height: 100px; font-family: inherit;" required></textarea>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; background:#fafafa; padding: 14px 20px; margin: 0 -20px -20px -20px; border-top:1px solid #eee;">
+          <button type="button" id="cancelReview" class="btn" style="background:#6c757d; color: white; padding:10px 16px; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 80px;">Cancel</button>
+          <button type="submit" class="btn" style="background:#28a745; color: white; padding:10px 16px; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 120px;">Submit Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 
 
     <!-- ================================================
@@ -518,6 +577,127 @@ $(document).ready(function(){
     <script type="text/javascript" src="js/plugins.min.js"></script>
     <!--custom-script.js - Add your own theme custom JS-->
     <script type="text/javascript" src="js/custom-script.js"></script>
+    
+    <script>
+    // Review Modal Functionality
+    let currentRating = 0;
+    
+    function openReviewModal(orderId) {
+        document.getElementById('reviewOrderId').value = orderId;
+        document.getElementById('reviewModal').style.display = 'block';
+        resetRating();
+    }
+    
+    function closeReviewModal() {
+        document.getElementById('reviewModal').style.display = 'none';
+        document.getElementById('reviewForm').reset();
+        resetRating();
+    }
+    
+    function resetRating() {
+        currentRating = 0;
+        document.getElementById('ratingValue').value = 0;
+        document.getElementById('ratingText').textContent = 'Click to rate';
+        document.querySelectorAll('.star-rating i').forEach(star => {
+            star.style.color = '#ddd';
+        });
+    }
+    
+    // Star rating functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const stars = document.querySelectorAll('.star-rating i');
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                currentRating = rating;
+                document.getElementById('ratingValue').value = rating;
+                
+                // Update rating text
+                const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+                document.getElementById('ratingText').textContent = ratingTexts[rating];
+                
+                stars.forEach((s, index) => {
+                    if (index < rating) {
+                        s.style.color = '#ffc107';
+                    } else {
+                        s.style.color = '#ddd';
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseenter', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                stars.forEach((s, index) => {
+                    if (index < rating) {
+                        s.style.color = '#ffc107';
+                    } else {
+                        s.style.color = '#ddd';
+                    }
+                });
+            });
+        });
+        
+        document.querySelector('.star-rating').addEventListener('mouseleave', function() {
+            stars.forEach((s, index) => {
+                if (index < currentRating) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#ddd';
+                }
+            });
+        });
+        
+        // Modal close events
+        document.getElementById('closeReviewModal').addEventListener('click', closeReviewModal);
+        document.getElementById('cancelReview').addEventListener('click', closeReviewModal);
+        
+        // Close modal when clicking outside
+        document.getElementById('reviewModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeReviewModal();
+            }
+        });
+        
+        // Form submission
+        document.getElementById('reviewForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const rating = document.getElementById('ratingValue').value;
+            const reviewText = document.querySelector('textarea[name="review_text"]').value;
+            
+            if (rating == 0) {
+                alert('Please select a rating');
+                return;
+            }
+            
+            if (!reviewText.trim()) {
+                alert('Please write a review');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            
+            fetch('routers/submit-review.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Review submitted successfully!');
+                    closeReviewModal();
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to submit review');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to submit review');
+            });
+        });
+    });
+    </script>
 </body>
 
 </html>

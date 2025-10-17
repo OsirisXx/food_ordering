@@ -38,7 +38,7 @@ $profile_image = isset($_SESSION['profile_image']) && file_exists($_SESSION['pro
         </li>
         
         <li class="<?php echo ($current_page == 'orders') ? 'bold active' : 'bold'; ?>">
-            <a href="all-orders.php" class="waves-effect">
+            <a href="orders.php" class="waves-effect">
                 <i class="fa fa-shopping-cart"></i><span>Orders</span>
             </a>
         </li>

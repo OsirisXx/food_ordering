@@ -9,12 +9,6 @@ if (isset($_SESSION['admin_sid']) && $_SESSION['admin_sid'] == session_id()) {
     $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'Admin';
     $role = isset($_SESSION['role']) ? $_SESSION['role'] : 'Administrator';
 
-    // Gate: redirect if this page is archived
-    $res = mysqli_query($con, "SELECT archived FROM archived_pages WHERE page_key='menu-management' LIMIT 1");
-    if ($res && ($row = mysqli_fetch_assoc($res)) && (int)$row['archived'] === 1) {
-        header('Location: utilities-admin.php?tab=archive');
-        exit();
-    }
 } else {
     header('location: login.php');
     exit();
@@ -149,22 +143,46 @@ if (isset($_SESSION['admin_sid']) && $_SESSION['admin_sid'] == session_id()) {
     <div id="categoryModal" class="modal">
         <div class="modal-content">
             <div class="modal-header-custom">
-                <h4>Add New Category</h4>
+                <h4>Manage Categories</h4>
                 <span class="close" onclick="closeCategoryModal()">&times;</span>
             </div>
-            <form id="categoryForm">
-                <div class="row">
-                    <div class="col s12">
-                        <div class="input-field">
-                            <input type="text" id="categoryName" name="name" class="form-control-custom" placeholder="Category Name" required>
+            
+            <!-- Add New Category Section -->
+            <div class="section">
+                <h5 style="color: #ff6b6b; margin-bottom: 15px;">
+                    <i class="fa fa-plus-circle"></i> Add New Category
+                </h5>
+                <form id="categoryForm">
+                    <div class="row">
+                        <div class="col s12">
+                            <div class="input-field">
+                                <input type="text" id="categoryName" name="name" class="form-control-custom" placeholder="Category Name" required>
+                            </div>
                         </div>
                     </div>
+                    <div style="text-align: right; margin-bottom: 20px;">
+                        <button type="submit" class="btn btn-primary" style="background: #ff6b6b; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; min-height: 40px;">
+                            <i class="fa fa-plus"></i> Add Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <hr style="border: 1px solid #e0e0e0; margin: 20px 0;">
+
+            <!-- Existing Categories Section -->
+            <div class="section">
+                <h5 style="color: #ff6b6b; margin-bottom: 15px;">
+                    <i class="fa fa-list"></i> Existing Categories
+                </h5>
+                <div id="categoriesList" class="categories-list">
+                    <!-- Categories will be loaded here -->
                 </div>
-                <div class="modal-footer" style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeCategoryModal()" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px; margin-right: 10px;">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="background: #ff6b6b; color: white; border: none; padding: 10px 20px;">Save</button>
-                </div>
-            </form>
+            </div>
+
+            <div class="modal-footer" style="text-align: right; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeCategoryModal()" style="background: #666; color: white; border: none; padding: 10px 20px;">Close</button>
+            </div>
         </div>
     </div>
 
@@ -394,6 +412,7 @@ if (isset($_SESSION['admin_sid']) && $_SESSION['admin_sid'] == session_id()) {
         // Open add category modal
         function openAddCategoryModal() {
             $('#categoryForm')[0].reset();
+            loadExistingCategories();
             $('body').addClass('modal-open');
             $('#categoryModal').show();
         }
@@ -439,12 +458,73 @@ if (isset($_SESSION['admin_sid']) && $_SESSION['admin_sid'] == session_id()) {
                 if (response.success) {
                     showToast(response.message || 'Category added', 'success');
                     loadCategories();
-                    closeCategoryModal();
+                    loadExistingCategories(); // Refresh the categories list in modal
+                    $('#categoryForm')[0].reset(); // Clear the form
                 } else {
                     showToast(response.message || 'Failed to add category', 'error');
                 }
             });
         });
+
+        // Load existing categories for display in modal
+        function loadExistingCategories() {
+            $.ajax({
+                url: 'routers/get-categories.php',
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success) {
+                        renderCategoriesList(response.categories || []);
+                    } else {
+                        $('#categoriesList').html('<p style="color: #999; text-align: center; padding: 20px;">No categories found</p>');
+                    }
+                },
+                error: function() {
+                    $('#categoriesList').html('<p style="color: #ff6b6b; text-align: center; padding: 20px;">Error loading categories</p>');
+                }
+            });
+        }
+
+        // Render categories list in modal
+        function renderCategoriesList(categories) {
+            if (categories.length === 0) {
+                $('#categoriesList').html('<p style="color: #999; text-align: center; padding: 20px;">No categories found</p>');
+                return;
+            }
+
+            let html = '<div class="categories-grid">';
+            categories.forEach(function(category) {
+                html += `
+                    <div class="category-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px;">
+                        <div>
+                            <span style="font-weight: 500; color: #333;">${category.name}</span>
+                        </div>
+                        <div>
+                            <button onclick="deleteCategory(${category.id}, '${category.name}')" 
+                                    style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            $('#categoriesList').html(html);
+        }
+
+        // Delete category
+        function deleteCategory(categoryId, categoryName) {
+            showConfirm(`Delete category "${categoryName}"? This will also affect items in this category.`, 'Delete', 'Cancel', function(){
+                $.post('routers/delete-category.php', {category_id: categoryId}, function(response) {
+                    if (response.success) {
+                        showToast(response.message || 'Category deleted', 'success');
+                        loadCategories(); // Refresh main categories
+                        loadExistingCategories(); // Refresh modal categories list
+                    } else {
+                        showToast(response.message || 'Failed to delete category', 'error');
+                    }
+                });
+            });
+        }
 
         // Delete item
         function deleteItem(itemId) {

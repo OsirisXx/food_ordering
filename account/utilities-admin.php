@@ -55,6 +55,67 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
             $error_message = "Failed to update page archive: " . mysqli_error($con);
         }
     }
+
+    // Bulk archive current data per page
+    if (isset($_POST['bulk_archive_page']) && isset($_POST['bulk_page_key'])) {
+        $bulk_page_key = mysqli_real_escape_string($con, $_POST['bulk_page_key']);
+        if ($bulk_page_key === 'all-orders') {
+            // Move all non-deleted orders to order_archive and mark deleted
+            $ins = "INSERT INTO order_archive (order_id, customer_name, email, total, archived_at)
+                    SELECT o.id, u.name, u.email, o.total, NOW()
+                    FROM orders o LEFT JOIN users u ON o.customer_id = u.id
+                    WHERE o.deleted = 0";
+            $ok1 = mysqli_query($con, $ins);
+            $ok2 = mysqli_query($con, "UPDATE orders SET deleted = 1 WHERE deleted = 0");
+            if ($ok1 && $ok2) {
+                $success_message = "All current orders archived.";
+                mysqli_query($con, "INSERT INTO activity_logs (user_role, action, date) VALUES ('Admin', 'Bulk archived all orders', NOW())");
+            } else {
+                $error_message = "Failed to archive orders: " . mysqli_error($con);
+            }
+        } elseif ($bulk_page_key === 'menu-management') {
+            // Move all non-deleted items to menu_archive and mark deleted
+            $ins = "INSERT INTO menu_archive (menu_id, item_name, image, description, price, category, status, archived_at)
+                    SELECT i.id, i.name, i.image, i.description, i.price,
+                           (SELECT name FROM categories WHERE id=i.category_id LIMIT 1) as category,
+                           i.status, NOW()
+                    FROM items i WHERE i.deleted = 0";
+            $ok1 = mysqli_query($con, $ins);
+            $ok2 = mysqli_query($con, "UPDATE items SET deleted = 1 WHERE deleted = 0");
+            if ($ok1 && $ok2) {
+                $success_message = "All current menu items archived.";
+                mysqli_query($con, "INSERT INTO activity_logs (user_role, action, date) VALUES ('Admin', 'Bulk archived all menu items', NOW())");
+            } else {
+                $error_message = "Failed to archive menu items: " . mysqli_error($con);
+            }
+        } elseif ($bulk_page_key === 'staffs-admin') {
+            // Ensure staff table exists (align with staffs-admin.php)
+            mysqli_query($con, "CREATE TABLE IF NOT EXISTS staff (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(120) NOT NULL,
+                contact VARCHAR(50) NOT NULL,
+                role VARCHAR(40) NOT NULL,
+                status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+                hire_date DATE DEFAULT NULL,
+                deleted TINYINT(1) NOT NULL DEFAULT 0
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            // Move all non-deleted staff to staff_archive and mark deleted
+            $ins = "INSERT INTO staff_archive (staff_id, name, email, contact, role, status, archived_at)
+                    SELECT s.id, s.name, s.email, s.contact, s.role, s.status, NOW()
+                    FROM staff s WHERE s.deleted = 0";
+            $ok1 = mysqli_query($con, $ins);
+            $ok2 = mysqli_query($con, "UPDATE staff SET deleted = 1 WHERE deleted = 0");
+            if ($ok1 && $ok2) {
+                $success_message = "All current staff archived.";
+                mysqli_query($con, "INSERT INTO activity_logs (user_role, action, date) VALUES ('Admin', 'Bulk archived all staff', NOW())");
+            } else {
+                $error_message = "Failed to archive staff: " . mysqli_error($con);
+            }
+        } else {
+            $error_message = "Unknown page for bulk archive.";
+        }
+    }
     
     // Handle restore order
     if (isset($_POST['restore_order'])) {
@@ -75,9 +136,9 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                 $customer = mysqli_fetch_assoc($customer_result);
                 $customer_id = $customer['id'];
                 
-                // Insert order back into orders table
-                $restore_query = "INSERT INTO orders (id, customer_id, address, description, date, payment_type, total, status, deleted) 
-                                 VALUES ('{$archived_order['order_id']}', '$customer_id', 'Restored from Archive', 'Restored from Archive', NOW(), 'Wallet', '{$archived_order['total']}', 'Yet to be delivered', 0)";
+                // Insert order back into orders table (let auto-increment handle the ID)
+                $restore_query = "INSERT INTO orders (customer_id, address, description, date, payment_type, total, status, deleted) 
+                                 VALUES ('$customer_id', 'Restored from Archive', 'Restored from Archive', NOW(), 'Wallet', '{$archived_order['total']}', 'Yet to be delivered', 0)";
                 
                 if (mysqli_query($con, $restore_query)) {
                     // Remove from archive
@@ -103,8 +164,51 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
     // Handle restore menu item
     if (isset($_POST['restore_menu'])) {
         $menu_id = $_POST['menu_id'];
-        // Add logic to restore menu item from archive
-        $success_message = "Menu item restored successfully!";
+        
+        // Get archived menu data
+        $get_archived_menu = "SELECT * FROM menu_archive WHERE menu_id = '$menu_id'";
+        $archived_result = mysqli_query($con, $get_archived_menu);
+        
+        if (mysqli_num_rows($archived_result) > 0) {
+            $archived_menu = mysqli_fetch_assoc($archived_result);
+            
+            // Get category_id from categories table using category name
+            $category_query = "SELECT id FROM categories WHERE name = '{$archived_menu['category']}' LIMIT 1";
+            $category_result = mysqli_query($con, $category_query);
+            $category_id = mysqli_num_rows($category_result) > 0 ? mysqli_fetch_assoc($category_result)['id'] : NULL;
+            
+            // Insert menu item back into items table using prepared statement for safe BLOB handling
+            $stmt = mysqli_prepare($con, "INSERT INTO items (name, description, price, status, category_id, image, deleted) VALUES (?, ?, ?, ?, ?, ?, 0)");
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "ssdsib", 
+                    $archived_menu['item_name'], 
+                    $archived_menu['description'], 
+                    $archived_menu['price'], 
+                    $archived_menu['status'], 
+                    $category_id, 
+                    $archived_menu['image']
+                );
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    // Remove from archive
+                    $delete_archive = "DELETE FROM menu_archive WHERE menu_id = '$menu_id'";
+                    mysqli_query($con, $delete_archive);
+                    
+                    // Log activity
+                    $log_query = "INSERT INTO activity_logs (user_role, action, date) VALUES ('Admin', 'Restored menu item: {$archived_menu['item_name']} from archive', NOW())";
+                    mysqli_query($con, $log_query);
+                    
+                    $success_message = "Menu item restored successfully!";
+                } else {
+                    $error_message = "Error restoring menu item: " . mysqli_stmt_error($stmt);
+                }
+                mysqli_stmt_close($stmt);
+            } else {
+                $error_message = "Error preparing statement: " . mysqli_error($con);
+            }
+        } else {
+            $error_message = "Archived menu item not found.";
+        }
     }
     
     // Handle delete from archive
@@ -195,6 +299,22 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
       }
       .tabs .indicator {
         background-color: #d84315;
+      }
+      /* Inner archive tabs: underline active only */
+      #archive-tabs {
+        background: transparent;
+        border-radius: 0;
+        margin-bottom: 12px;
+      }
+      #archive-tabs .tab a {
+        background: transparent !important;
+        color: #d84315;
+        border-bottom: 3px solid transparent;
+      }
+      #archive-tabs .tab a.active {
+        background: transparent !important;
+        color: #d84315 !important;
+        border-bottom-color: #d84315;
       }
       .btn-small {
         padding: 0 8px;
@@ -313,17 +433,17 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                 <div class="col s12">
                   <ul class="tabs">
                     <li class="tab col s4">
-                      <a href="?tab=activity">
+                      <a href="utilities-admin.php?tab=activity">
                         Activity Log
                       </a>
                     </li>
                     <li class="tab col s4">
-                      <a href="?tab=archive">
+                      <a href="utilities-admin.php?tab=archive">
                         Archive
                       </a>
                     </li>
                     <li class="tab col s4">
-                      <a href="?tab=backup">
+                      <a href="utilities-admin.php?tab=backup">
                         Backup
                       </a>
                     </li>
@@ -380,83 +500,38 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
               <div id="archive" class="col s12" style="display: none;">
                   <h5>Archive</h5>
 
-                  <?php
-                  // fetch current page archive statuses
-                  $pages_status = [];
-                  $res_pages = mysqli_query($con, "SELECT page_key, archived, archived_at FROM archived_pages WHERE page_key IN ('all-orders','menu-management','staffs-admin')");
-                  while ($res_pages && $row = mysqli_fetch_assoc($res_pages)) { $pages_status[$row['page_key']] = $row; }
-                  ?>
-
+                  <!-- Top control: bulk archive based on current tab -->
                   <div class="card">
                     <div class="card-content">
-                      <span class="card-title">Archive Pages</span>
-                      <form method="POST" class="row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <div class="input-field" style="margin:0;min-width:220px;">
-                          <select name="page_key" class="form-control-custom">
-                            <option value="all-orders">All Orders</option>
-                            <option value="menu-management">Menu Management</option>
-                            <option value="staffs-admin">Staffs Admin</option>
-                          </select>
-                        </div>
-                        <div class="input-field" style="margin:0;">
-                          <select name="desired" class="form-control-custom">
-                            <option value="1">Archive</option>
-                            <option value="0">Unarchive</option>
-                          </select>
-                        </div>
-                        <button type="submit" name="toggle_page_archive" class="btn red btn-small">Apply</button>
+                      <form method="POST" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <input type="hidden" name="bulk_page_key" value="<?php echo $archive_tab == 'menu' ? 'menu-management' : 'all-orders'; ?>">
+                        <button type="submit" name="bulk_archive_page" class="btn red btn-small" onclick="return confirmBulkArchive('<?php echo $archive_tab == 'menu' ? 'Menu Management' : 'Orders'; ?>');">Archive Page</button>
+                        <span style="color:#777;font-size:12px;">Moves current page data into its archive and keeps them listed below.</span>
                       </form>
-                      <div style="margin-top:10px;">
-                        <table class="striped responsive-table">
-                          <thead><tr><th>Page</th><th>Status</th><th>Archived At</th></tr></thead>
-                          <tbody>
-                            <tr>
-                              <td>All Orders</td>
-                              <td><?php echo (!empty($pages_status['all-orders']['archived']) ? 'Archived' : 'Active'); ?></td>
-                              <td><?php echo $pages_status['all-orders']['archived_at'] ?? '-'; ?></td>
-                            </tr>
-                            <tr>
-                              <td>Menu Management</td>
-                              <td><?php echo (!empty($pages_status['menu-management']['archived']) ? 'Archived' : 'Active'); ?></td>
-                              <td><?php echo $pages_status['menu-management']['archived_at'] ?? '-'; ?></td>
-                            </tr>
-                            <tr>
-                              <td>Staffs Admin</td>
-                              <td><?php echo (!empty($pages_status['staffs-admin']['archived']) ? 'Archived' : 'Active'); ?></td>
-                              <td><?php echo $pages_status['staffs-admin']['archived_at'] ?? '-'; ?></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
                     </div>
                   </div>
-                  
-                  <!-- Archive Sub-tabs -->
+
+                  <!-- Internal Archive buttons -->
                   <div class="row">
                     <div class="col s12">
-                      <ul class="tabs">
+                      <ul class="tabs" id="archive-tabs">
                         <li class="tab col s6">
-                          <a href="?tab=archive&archive=orders" class="<?php echo $archive_tab == 'orders' ? 'active' : ''; ?>">
-                            Order Archive
-                          </a>
+                          <a href="utilities-admin.php?tab=archive&archive=orders" class="<?php echo $archive_tab == 'orders' ? 'active' : ''; ?>">Order Archives</a>
                         </li>
                         <li class="tab col s6">
-                          <a href="?tab=archive&archive=menu" class="<?php echo $archive_tab == 'menu' ? 'active' : ''; ?>">
-                            Menu Archive
-                          </a>
+                          <a href="utilities-admin.php?tab=archive&archive=menu" class="<?php echo $archive_tab == 'menu' ? 'active' : ''; ?>">Menu Archives</a>
                         </li>
                       </ul>
                     </div>
                   </div>
-                  
+
                   <?php if ($archive_tab == 'orders'): ?>
-                    <!-- Order Archive -->
+                    <!-- Order Archive Table -->
                     <div id="order-archive" class="col s12">
                       <?php
                       $order_archive_query = "SELECT * FROM order_archive ORDER BY archived_at DESC";
                       $order_archive_result = mysqli_query($con, $order_archive_query);
                       ?>
-                      
                       <div class="card">
                         <div class="card-content">
                           <h6>Order Archive</h6>
@@ -474,7 +549,7 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                             </thead>
                             <tbody>
                               <?php 
-                              if (mysqli_num_rows($order_archive_result) > 0) {
+                              if ($order_archive_result && mysqli_num_rows($order_archive_result) > 0) {
                                 while ($order = mysqli_fetch_assoc($order_archive_result)): 
                               ?>
                                 <tr>
@@ -511,15 +586,13 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                         </div>
                       </div>
                     </div>
-                    
                   <?php else: ?>
-                    <!-- Menu Archive -->
+                    <!-- Menu Archive Table -->
                     <div id="menu-archive" class="col s12">
                       <?php
                       $menu_archive_query = "SELECT * FROM menu_archive ORDER BY archived_at DESC";
                       $menu_archive_result = mysqli_query($con, $menu_archive_query);
                       ?>
-                      
                       <div class="card">
                         <div class="card-content">
                           <h6>Menu Archive</h6>
@@ -529,7 +602,6 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                                 <th>Menu ID</th>
                                 <th>Item Name</th>
                                 <th>Image</th>
-                                <th>Description</th>
                                 <th>Price</th>
                                 <th>Category</th>
                                 <th>Status</th>
@@ -539,16 +611,13 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                             </thead>
                             <tbody>
                               <?php 
-                              if (mysqli_num_rows($menu_archive_result) > 0) {
+                              if ($menu_archive_result && mysqli_num_rows($menu_archive_result) > 0) {
                                 while ($menu = mysqli_fetch_assoc($menu_archive_result)): 
                               ?>
                                 <tr>
                                   <td><?php echo $menu['menu_id']; ?></td>
                                   <td><?php echo $menu['item_name']; ?></td>
-                                  <td>
-                                    <i class="fa fa-image"></i> Image
-                                  </td>
-                                  <td><?php echo $menu['description']; ?></td>
+                                  <td><i class="fa fa-image"></i> Image</td>
                                   <td>P<?php echo number_format($menu['price'], 2); ?></td>
                                   <td><?php echo $menu['category']; ?></td>
                                   <td><?php echo $menu['status']; ?></td>
@@ -570,7 +639,7 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                               <?php 
                                 endwhile;
                               } else {
-                                echo "<tr><td colspan='9' class='center'>No archived menu items found</td></tr>";
+                                echo "<tr><td colspan='8' class='center'>No archived menu items found</td></tr>";
                               }
                               ?>
                             </tbody>
@@ -594,11 +663,9 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                           </span>
                           <p>Create a backup of your database to ensure data safety.</p>
                           
-                          <form method="POST">
-                            <button class="btn waves-effect waves-light" style="background-color: #CD853F;" type="submit" name="backup_database">
-                              <i class="fa fa-download"></i> Backup Database
-                            </button>
-                          </form>
+                          <button id="btnBackupNow" class="btn waves-effect waves-light" style="background-color: #CD853F;">
+                            <i class="fa fa-download"></i> Backup Database
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -621,6 +688,63 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                     </div>
                   </div>
                   
+                  <!-- Backups List -->
+                  <div class="row">
+                    <div class="col s12">
+                      <div class="card">
+                        <div class="card-content">
+                          <span class="card-title"><i class="fa fa-list"></i> Existing Backups</span>
+                          <div id="backupsTableWrapper">
+                            <?php
+                              $backups_dir = __DIR__ . '/backups';
+                              if (!is_dir($backups_dir)) { @mkdir($backups_dir, 0755, true); }
+                              $files = [];
+                              if (is_dir($backups_dir)) {
+                                foreach (scandir($backups_dir) as $f) {
+                                  if ($f === '.' || $f === '..') continue;
+                                  if (preg_match('/^backup_\d{8}_\d{6}\.sql$/', $f)) {
+                                    $files[] = $f;
+                                  }
+                                }
+                              }
+                              sort($files);
+                              $files = array_reverse($files);
+                            ?>
+                            <table class="striped responsive-table">
+                              <thead>
+                                <tr>
+                                  <th>File</th>
+                                  <th>Size</th>
+                                  <th>Created</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody id="backupsTbody">
+                                <?php if (!empty($files)): foreach ($files as $f): 
+                                  $fp = $backups_dir . DIRECTORY_SEPARATOR . $f;
+                                  $size = @filesize($fp);
+                                  $mtime = @filemtime($fp);
+                                ?>
+                                  <tr>
+                                    <td><?php echo htmlspecialchars($f); ?></td>
+                                    <td><?php echo $size !== false ? number_format($size/1024, 2) . ' KB' : '-'; ?></td>
+                                    <td><?php echo $mtime ? date('Y-m-d H:i:s', $mtime) : '-'; ?></td>
+                                    <td>
+                                      <a class="btn btn-small" href="backups/<?php echo rawurlencode($f); ?>" download>Download</a>
+                                      <button class="btn btn-small" data-delete-backup="<?php echo htmlspecialchars($f); ?>" style="background:#dc3545;">Delete</button>
+                                    </td>
+                                  </tr>
+                                <?php endforeach; else: ?>
+                                  <tr><td colspan="4" class="center">No backups yet</td></tr>
+                                <?php endif; ?>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- System Information -->
                   <div class="row">
                     <div class="col s12">
@@ -753,22 +877,93 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
             switchTab('activity');
         }
         
-        // Handle tab clicks
-        $('.tabs a').click(function(e) {
-            e.preventDefault();
+        // Handle top-level tab clicks only (exclude inner archive tabs)
+        $('.tabs:not(#archive-tabs) a').click(function(e) {
             var href = $(this).attr('href');
-            if (href && href.indexOf('?tab=') !== -1) {
-                var tabName = href.split('?tab=')[1];
-                switchTab(tabName);
-                // Update URL without page reload
-                history.pushState(null, null, href);
+            if (!href) return;            
+            // Allow full navigation for inner archive sub-tabs so PHP can render correct table
+            if (href.indexOf('&archive=') !== -1 && href.indexOf('?tab=archive') !== -1) {
+                return; // do not preventDefault; let the page reload to update server-rendered content
             }
+            e.preventDefault();
+            // Single-page switching for top-level tabs
+            try {
+                var url = new URL(href, window.location.href);
+                var tabName = url.searchParams.get('tab') || 'activity';
+                switchTab(tabName);
+                // Keep current path; only swap query string
+                var newUrl = window.location.pathname + url.search;
+                history.pushState(null, '', newUrl);
+            } catch(err) {
+                var match = href.match(/\?tab=([^&]+)/);
+                var tabName2 = match ? match[1] : 'activity';
+                switchTab(tabName2.indexOf('archive') === 0 ? 'archive' : tabName2);
+                var q = href.charAt(0) === '?' ? href : ('?' + href);
+                history.pushState(null, '', window.location.pathname + q);
+            }
+        });
+
+        // Force full navigation for inner archive buttons so PHP swaps the table
+        $('#archive-tabs a').on('click', function(e){
+            var href = $(this).attr('href');
+            if (!href) { return; }
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = href;
         });
         
         // Handle modal close button
         $('.modal-close').click(function(e) {
             e.preventDefault();
             $('.modal').hide();
+        });
+
+        // Backup actions
+        $('#btnBackupNow').on('click', function(){
+            var $btn = $(this);
+            $btn.prop('disabled', true).text('Backing up...');
+            $.post('routers/backup-database.php', {}, function(res){
+                if (res && res.success) {
+                    alert(res.message || 'Backup created');
+                    // Prepend the new backup row
+                    var now = new Date();
+                    var row = '<tr>'+
+                        '<td>' + res.file + '</td>'+
+                        '<td>-</td>'+
+                        '<td>' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0') + '</td>'+
+                        '<td><a class="btn btn-small" href="backups/' + encodeURIComponent(res.file) + '" download>Download</a> '+
+                        '<button class="btn btn-small" data-delete-backup="' + res.file + '" style="background:#dc3545;">Delete</button></td>'+
+                        '</tr>';
+                    var $tb = $('#backupsTbody');
+                    if ($tb.find('tr td').first().text() === 'No backups yet') { $tb.empty(); }
+                    $tb.prepend(row);
+                } else {
+                    alert((res && res.message) ? res.message : 'Backup failed');
+                }
+            }, 'json').fail(function(xhr){
+                alert('Backup failed');
+            }).always(function(){
+                $btn.prop('disabled', false).html('<i class="fa fa-download"></i> Backup Database');
+            });
+        });
+
+        $(document).on('click', '[data-delete-backup]', function(){
+            var name = $(this).data('delete-backup');
+            if (!confirm('Delete backup ' + name + '? This cannot be undone.')) return;
+            $.post('routers/delete-backup.php', { name: name }, function(res){
+                if (res && res.success) {
+                    // Remove row
+                    var $row = $('[data-delete-backup="' + name.replace(/([.*+?^${}()|[\]\\])/g,'\\$1') + '"]').closest('tr');
+                    $row.remove();
+                    if ($('#backupsTbody tr').length === 0) {
+                        $('#backupsTbody').html('<tr><td colspan="4" class="center">No backups yet</td></tr>');
+                    }
+                } else {
+                    alert((res && res.message) ? res.message : 'Delete failed');
+                }
+            }, 'json').fail(function(){
+                alert('Delete failed');
+            });
         });
     });
     
@@ -799,6 +994,12 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
             'Are you sure you want to permanently delete this menu item from the archive? This action cannot be undone.';
         
         return confirm(message);
+    }
+
+    // Confirm irreversible bulk archive
+    function confirmBulkArchive(pageLabel) {
+        var msg = 'Archive current data for ' + pageLabel + '?\n\nThis will move all current records into the archive and hide them from the live page. This is a one-way process and cannot be undone.';
+        return confirm(msg);
     }
   </script>
 <?php include 'includes/footer.php'; ?>

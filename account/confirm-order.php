@@ -216,32 +216,53 @@ if($continue){
 		<p><strong>Payment Type:</strong> '.$_POST['payment_type'].'</p>			
         <a href="#" class="secondary-content"><i class="mdi-action-grade"></i></a>';
 		
-	foreach ($_POST as $key => $value)
-	{
-		if(is_numeric($key)){		
-		$result = mysqli_query($con, "SELECT * FROM items WHERE id = $key");
+	// Handle both old format (individual item quantities) and new format (cart_data JSON)
+	$cart_items = array();
+	
+	// Check if cart_data is provided (new format)
+	if(isset($_POST['cart_data']) && !empty($_POST['cart_data'])) {
+		$cart_data = json_decode($_POST['cart_data'], true);
+		if($cart_data) {
+			foreach($cart_data as $item_id => $quantity) {
+				$cart_items[$item_id] = $quantity;
+			}
+		}
+	} else {
+		// Handle old format for backward compatibility
+		foreach ($_POST as $key => $value) {
+			if($key == 'action' || $value == ''){
+				continue;
+			}
+			if(is_numeric($key)){
+				$cart_items[$key] = $value;
+			}
+		}
+	}
+	
+	// Display cart items
+	foreach($cart_items as $item_id => $quantity) {
+		$result = mysqli_query($con, "SELECT * FROM items WHERE id = $item_id");
 		while($row = mysqli_fetch_array($result))
 		{
 			$price = $row['price'];
 			$item_name = $row['name'];
 			$item_id = $row['id'];
 		}
-			$price = $value*$price;
-			    echo '<li class="collection-item">
+		$price = $quantity * $price;
+		echo '<li class="collection-item">
         <div class="row">
             <div class="col s7">
                 <p class="collections-title"><strong>#'.$item_id.' </strong>'.$item_name.'</p>
             </div>
             <div class="col s2">
-                <span>'.$value.' Pieces</span>
+                <span>'.$quantity.' Pieces</span>
             </div>
             <div class="col s3">
-                <span>PHP '.$price.'</span>
+                <span>PHP '.number_format($price, 2).'</span>
             </div>
         </div>
     </li>';
 		$total = $total + $price;
-	}
 	}
     echo '<li class="collection-item">
         <div class="row">
@@ -252,7 +273,7 @@ if($continue){
                 <span>&nbsp;</span>
             </div>
             <div class="col s3">
-                <span><strong>PHP '.$total.'</strong></span>
+                <span><strong>PHP '.number_format($total, 2).'</strong></span>
             </div>
         </div>
     </li>';
@@ -274,11 +295,8 @@ if($continue){
 ?>
 <form action="routers/order-router.php" method="post">
 <?php
-foreach ($_POST as $key => $value)
-{
-	if(is_numeric($key)){
-		echo '<input type="hidden" name="'.$key.'" value="'.$value.'">';
-	}
+foreach($cart_items as $item_id => $quantity) {
+	echo '<input type="hidden" name="'.$item_id.'" value="'.$quantity.'">';
 }
 ?>
 <input type="hidden" name="payment_type" value="<?php echo $_POST['payment_type'];?>">

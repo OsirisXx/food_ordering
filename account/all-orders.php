@@ -7,12 +7,6 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
     $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'Admin';
     $role = isset($_SESSION['role']) ? $_SESSION['role'] : 'Administrator';
 
-    // Gate: redirect if this page is archived
-    $res = mysqli_query($con, "SELECT archived FROM archived_pages WHERE page_key='all-orders' LIMIT 1");
-    if ($res && ($row = mysqli_fetch_assoc($res)) && (int)$row['archived'] === 1) {
-        header('Location: utilities-admin.php?tab=archive');
-        exit();
-    }
 
     // Filters
     $search = isset($_GET['search']) ? mysqli_real_escape_string($con, $_GET['search']) : '';
@@ -120,7 +114,6 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
               <th>Total</th>
               <th>Order Status</th>
               <th>Payment Mode</th>
-              <th>Cancel Reason</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -137,9 +130,13 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
                 </span>
               </td>
               <td><?php echo htmlspecialchars($order['payment_type'] ?? 'Takeaway'); ?></td>
-              <td>-</td>
               <td class="actions-cell">
                 <div class="button-group">
+                  <form method="post" action="routers/edit-orders.php" class="inline-form">
+                    <input type="hidden" name="id" value="<?php echo $order['id']; ?>">
+                    <input type="hidden" name="status" value="Completed">
+                    <button type="submit" class="btn btn-primary-custom btn-sm" style="background:#D2B48C !important; width:100% !important;">Completed</button>
+                  </form>
                   <a class="btn btn-primary-custom btn-sm" href="orders.php?id=<?php echo $order['id']; ?>">View Details</a>
                   <form id="delete-form-<?php echo $order['id']; ?>" method="post" action="routers/cancel-order.php" class="inline-form">
                     <input type="hidden" name="id" value="<?php echo $order['id']; ?>">

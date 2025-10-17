@@ -18,6 +18,19 @@ CREATE TABLE IF NOT EXISTS `archived_pages` (
   UNIQUE KEY `uniq_archived_pages_page_key` (`page_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+-- Staff Archive table (for bulk page archive of staff)
+CREATE TABLE IF NOT EXISTS `staff_archive` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `staff_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(120) NOT NULL,
+  `contact` varchar(50) NOT NULL,
+  `role` varchar(40) NOT NULL,
+  `status` varchar(20) NOT NULL,
+  `archived_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 -- Order Archive table
 CREATE TABLE `order_archive` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

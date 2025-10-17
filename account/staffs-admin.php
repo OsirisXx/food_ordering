@@ -7,12 +7,6 @@ if(isset($_SESSION['admin_sid']) && $_SESSION['admin_sid']==session_id()) {
     $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'Admin';
     $role = isset($_SESSION['role']) ? $_SESSION['role'] : 'Administrator';
 
-    // Gate: redirect if this page is archived
-    $res = mysqli_query($con, "SELECT archived FROM archived_pages WHERE page_key='staffs-admin' LIMIT 1");
-    if ($res && ($row = mysqli_fetch_assoc($res)) && (int)$row['archived'] === 1) {
-        header('Location: utilities-admin.php?tab=archive');
-        exit();
-    }
 
     // Ensure staff table exists
     $con->query("CREATE TABLE IF NOT EXISTS staff (
